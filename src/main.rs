@@ -93,7 +93,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     // let t = elapsed_frames as f32 / 60.0;
 
     model.p = model.s;
-    model.s = next_point(model.s, w as f32, h as f32);
+    model.s = next_point(model.p, w as f32, h as f32);
 
     if elapsed_frames == 0 {
         draw.background().color(BLACK);
@@ -103,6 +103,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let i: f32 = log_normal.sample(&mut rand::thread_rng()) % 500.0;
 
     if i > 499.0 {
+        println!("{:?} / {:?} - {:?}", w, h, model.s);
         draw.rect()
             .x_y(0.0,0.0)
             .w_h(w as f32, h as f32)
@@ -200,11 +201,10 @@ fn next_point(point: Vector2, w: f32, h: f32) -> Vector2 {
     }
 }
 
-fn prob(coord: f32) -> bool {
+fn prob(coord: f32, s: f32) -> bool {
     let log_normal = LogNormal::new(2.0, 3.0).unwrap();
-    let i: f32 = log_normal.sample(&mut rand::thread_rng()) % 300.0;
-    let prob: bool = (i - (300.0 - coord.abs())) > 300.0;
-    return prob;
+    let i: f32 = log_normal.sample(&mut rand::thread_rng()) % s;
+    return (i - (s - coord.abs())) > s;
 }
 
 fn step() -> f32 {
@@ -224,7 +224,7 @@ fn next_min(coord: f32, s: f32) -> f32 {
     if coord <= -(s / 2.0) {
         return coord + 1.0;
     } else {
-        if coord > 0.0 && coord < (s / 2.0 - 5.0) && prob(coord) {
+        if coord > 0.0 && coord < (s / 2.0 - 6.0) && prob(coord, s) {
             return coord + step();
         } else {
             return coord - 1.0;
@@ -236,7 +236,7 @@ fn next_plus(coord: f32, s: f32) -> f32 {
     if coord >= s / 2.0 {
         return coord - 1.0;
     } else {
-        if coord < 0.0 && coord > -(s / 2.0 - 5.0) && prob(coord) {
+        if coord < 0.0 && coord > -(s / 2.0 - 6.0) && prob(coord, s) {
             return coord - step();
         } else {
             return coord + 1.0;
