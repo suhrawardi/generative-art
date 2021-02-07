@@ -1,0 +1,10 @@
+[package]
+name = "second"
+version = "0.1.0"
+authors = ["jarra <suhrawardi@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+nannou = "0.15"
+rand = "0.8.3"
+rand_distr = "0.4.0"
