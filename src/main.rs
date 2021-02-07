@@ -100,9 +100,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 
     let log_normal = LogNormal::new(2.0, 3.0).unwrap();
-    let i: f32 = log_normal.sample(&mut rand::thread_rng()) % 300.0;
+    let i: f32 = log_normal.sample(&mut rand::thread_rng()) % 500.0;
 
-    if i > 299.0 {
+    if i > 499.0 {
         draw.rect()
             .x_y(0.0,0.0)
             .w_h(w as f32, h as f32)
