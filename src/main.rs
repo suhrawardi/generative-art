@@ -105,9 +105,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     if i > 499.0 {
         println!("{:?} / {:?} - {:?}", w, h, model.s);
         draw.rect()
-            .x_y(0.0,0.0)
+            .x_y(0.0, 0.0)
             .w_h(w as f32, h as f32)
-            .color(hsla(0.0,0.0,0.0,0.005));
+            .color(hsla(0.0, 0.0, 0.0, 0.005));
     }
 
     let j: f32 = log_normal.sample(&mut rand::thread_rng()) % 300.0;
