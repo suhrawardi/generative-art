@@ -209,15 +209,8 @@ fn prob(coord: f32, s: f32) -> bool {
 
 fn step() -> f32 {
     let log_normal = LogNormal::new(2.0, 3.0).unwrap();
-    let i: f32 = log_normal.sample(&mut rand::thread_rng()) % 300.0;
-
-    if i > 299.0 {
-        return 3.0;
-    } else if i > 295.0 {
-        return 2.0;
-    } else {
-        return 1.0;
-    }
+    let i: f32 = log_normal.sample(&mut rand::thread_rng()) % 256.0;
+    return i;
 }
 
 fn next_min(coord: f32, s: f32) -> f32 {
