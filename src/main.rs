@@ -1,19 +1,85 @@
 use nannou::prelude::*;
 use rand::distributions::{Distribution, Uniform};
 use rand_distr::{LogNormal};
-use rand::seq::SliceRandom;
 
 
-const COLORS: [Rgb<u8>; 5] = [
-    OLIVEDRAB,
-    DARKOLIVEGREEN,
-    OLIVE,
-    OLIVE,
-    OLIVE
-];
+const RULE: i32 = 5;
+
 
 fn main() {
     nannou::app(model).update(update).exit(exit).run();
+}
+
+struct Ca {
+    w: f32,
+    h: f32,
+    size: f32,
+    cells: Vec<i32>,
+    rule_set: Vec<i32>,
+}
+
+
+impl Ca {
+    fn new(w: f32, h: f32, size: f32, rule_set: Vec<i32>) -> Self {
+        let w = w;
+        let h = h;
+//      let size = 4.0;
+        let size = size;
+        let cells = vec![0];
+//      let mut cells = vec![0; (rect.w() / w) as usize];
+//       cells[0] = 1; // We arbitrarily start with just the middle cell having a state of "1"
+        Ca {
+            w,
+            h,
+            size,
+            cells,
+            rule_set,
+        }
+    }
+
+    // The process of creating the new generation
+    fn generate(&mut self) {
+        // First we create an empty array for the new values
+        let mut next_gen = vec![0; self.cells.len()];
+
+        // For every spot, determine new state by examing current state, and neighbor states
+        // Ignore edges that only have one neighor
+//      for i in self.cells_range.clone() {
+//          let left = self.cells[i - 1]; // Left neighbor state
+//          let me = self.cells[i]; // Current state
+//          let right = self.cells[i + 1]; // Right beighbor state
+//          next_gen[i] = self.rule(left, me, right);
+//          // Compute next generation state based on ruleset
+//      }
+        // The current generation is the new generation
+        self.cells = next_gen;
+    }
+
+    fn display(&self, draw: &Draw) {
+        for i in (0..self.h as u32).step_by(self.size as usize) {
+            for j in (0..self.w as u32).step_by(self.size as usize) {
+                let y: f32 = i as f32 - self.h / 2.0 + self.size / 2.0;
+                let x: f32 = j as f32 - self.w / 2.0 + self.size / 2.0;
+
+                let log_normal = LogNormal::new(2.0, 3.0).unwrap();
+                let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 2.0;
+
+                if fill > 1.0 {
+                    draw.rect()
+                        .color(STEELBLUE)
+                        .w(self.size)
+                        .h(self.size)
+                        .x_y(x, y);
+                }
+            }
+        }
+    }
+
+    fn rule(&self, a: i32, b: i32, c: i32) -> i32 {
+        let bstr = format!("{}{}{}", a, b, c);
+        let int = isize::from_str_radix(&bstr, 2).unwrap();
+        return self.rule_set[int as usize];
+    }
 }
 
 struct Model {
@@ -22,18 +88,21 @@ struct Model {
     renderer: nannou::draw::Renderer,
     texture_capturer: wgpu::TextureCapturer,
     texture_reshaper: wgpu::TextureReshaper,
-    p: Vector2,
-    s: Vector2
+    ca: Ca,
 }
 
 fn model(app: &App) -> Model {
-    // 4K UHD texture
-    let texture_size = [3_840, 2_160];
+    app.set_loop_mode(LoopMode::rate_fps(2.0));
 
-    let [win_w, win_h] = [texture_size[0] / 4, texture_size[1] / 4];
+    // 4K UHD texture
+    let w: f32 = 3_840.0;
+    let h: f32 = 2_160.0;
+    let size: f32 = 16.0;
+    let texture_size = [w as u32, h as u32];
+
     let w_id = app
         .new_window()
-        .size(win_w, win_h)
+        .size(w as u32, h as u32)
         .title("second")
         .view(view)
         .build()
@@ -71,62 +140,38 @@ fn model(app: &App) -> Model {
 
     std::fs::create_dir_all(&capture_directory(app)).unwrap();
 
+    let rule_set = match RULE {
+        1 => vec![0, 1, 1, 1, 1, 0, 1, 1], // Rule 222
+        2 => vec![0, 1, 1, 1, 1, 1, 0, 1], // Rule 190
+        3 => vec![0, 1, 1, 1, 1, 0, 0, 0], // Rule 30
+        4 => vec![0, 1, 1, 1, 0, 1, 1, 0], // Rule 110
+        5 => vec![0, 1, 0, 1, 1, 0, 1, 0], // Rule 90
+        _ => vec![0, 0, 0, 0, 0, 0, 0, 0],
+    };
+
+    let ca = Ca::new(w, h, size, rule_set);
+
     Model {
         texture,
         draw,
         renderer,
         texture_capturer,
         texture_reshaper,
-        p:vec2(0.0,0.0),
-        s:vec2(0.0,0.0)
+        ca: ca,
     }
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
+//  model.ca.generate();
+
     let draw = &model.draw;
-    draw.reset();
-
-    let [w, h] = model.texture.size();
-    // let r = geom::Rect::from_w_h(w as f32, h as f32);
-
     let elapsed_frames = app.main_window().elapsed_frames();
-    // let t = elapsed_frames as f32 / 60.0;
-
-    model.p = model.s;
-    model.s = next_point(model.p, w as f32, h as f32);
 
     if elapsed_frames == 0 {
-        draw.background().color(BLACK);
+        draw.background().color(WHITE);
     }
 
-    let log_normal = LogNormal::new(2.0, 3.0).unwrap();
-    let i: f32 = log_normal.sample(&mut rand::thread_rng()) % 500.0;
-
-    if i > 499.0 {
-        println!("{:?} / {:?} - {:?}", w, h, model.s);
-        draw.rect()
-            .x_y(0.0, 0.0)
-            .w_h(w as f32, h as f32)
-            .color(hsla(0.0, 0.0, 0.0, 0.005));
-    }
-
-    let j: f32 = log_normal.sample(&mut rand::thread_rng()) % 300.0;
-    if j > 298.0 {
-        draw.line()
-            .start(model.p)
-            .end(model.s)
-            .weight(2.0)
-            .color(SIENNA);
-    } else {
-        let mut rng = rand::thread_rng();
-        let color_obj: Rgb<u8> = *COLORS.choose(&mut rng).unwrap();
-        let color = Srgb::<f32>::from_format(color_obj).into_linear();
-        draw.line()
-            .start(model.p)
-            .end(model.s)
-            .weight(1.0)
-            .color(color);
-    }
+    model.ca.display(&draw);
 
     let window = app.main_window();
     let device = window.swap_chain_device();
@@ -138,25 +183,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         .renderer
         .render_to_texture(device, &mut encoder, draw, &model.texture);
 
-    let snapshot = model
-        .texture_capturer
-        .capture(device, &mut encoder, &model.texture);
-
     window.swap_chain_queue().submit(&[encoder.finish()]);
 
-    if elapsed_frames % 1000 == 0 {
-        let path = capture_directory(app)
-            .join(elapsed_frames.to_string())
-            .with_extension("png");
-        snapshot
-            .read(move |result| {
-                let image = result.expect("failed to map texture memory");
-                image
-                    .save(&path)
-                    .expect("failed to save texture to png image");
-            })
-            .unwrap();
-    }
+    maybe_mk_screenshot(&app);
 }
 
 fn view(_app: &App, model: &Model, frame: Frame) {
@@ -177,63 +206,15 @@ fn exit(app: &App, model: Model) {
     println!("Done!");
 }
 
-fn next_point(point: Vector2, w: f32, h: f32) -> Vector2 {
-    let mut rng = rand::thread_rng();
-    let die = Uniform::from(1..9);
-    let throw = die.sample(&mut rng);
+fn maybe_mk_screenshot(app: &App) {
+    let window = app.main_window();
+    let elapsed_frames = window.elapsed_frames();
 
-    if throw == 1 {
-        return pt2(next_plus(point.x, w), point.y);
-    } else if throw == 2 {
-        return pt2(point.x, next_plus(point.y, h));
-    } else if throw == 3 {
-        return pt2(next_min(point.x, w), point.y);
-    } else if throw == 4 {
-        return pt2(point.x, next_min(point.y, h));
-    } else if throw == 5 {
-        return pt2(next_plus(point.x, w), next_plus(point.y, h));
-    } else if throw == 6 {
-        return pt2(next_min(point.x, w), next_plus(point.y, h));
-    } else if throw == 7 {
-        return pt2(next_plus(point.x, w), next_min(point.y, h));
-    } else {
-        return pt2(next_min(point.x, w), next_min(point.y, h));
-    }
-}
-
-fn prob(coord: f32, s: f32) -> bool {
-    let log_normal = LogNormal::new(2.0, 3.0).unwrap();
-    let i: f32 = log_normal.sample(&mut rand::thread_rng()) % s;
-    return (i - (s - coord.abs())) > s;
-}
-
-fn step() -> f32 {
-    let log_normal = LogNormal::new(2.0, 3.0).unwrap();
-    let i: f32 = log_normal.sample(&mut rand::thread_rng()) % 256.0;
-    return i;
-}
-
-fn next_min(coord: f32, s: f32) -> f32 {
-    if coord <= -(s / 2.0) {
-        return coord + 1.0;
-    } else {
-        if coord > 0.0 && coord < (s / 2.0 - 6.0) && prob(coord, s) {
-            return coord + step();
-        } else {
-            return coord - 1.0;
-        }
-    }
-}
-
-fn next_plus(coord: f32, s: f32) -> f32 {
-    if coord >= s / 2.0 {
-        return coord - 1.0;
-    } else {
-        if coord < 0.0 && coord > -(s / 2.0 - 6.0) && prob(coord, s) {
-            return coord - step();
-        } else {
-            return coord + 1.0;
-        }
+    if elapsed_frames % 1000 == 0 {
+        let path = capture_directory(app)
+            .join(elapsed_frames.to_string())
+            .with_extension("png");
+        window.capture_frame(path);
     }
 }
 
@@ -241,4 +222,5 @@ fn capture_directory(app: &App) -> std::path::PathBuf {
     app.project_path()
         .expect("could not locate project_path")
         .join(app.exe_name().unwrap())
+        .join("twee")
 }
