@@ -56,17 +56,25 @@ impl Ca {
     }
 
     fn display(&self, draw: &Draw) {
+        draw.background().color(BLACK);
+
         for i in (0..self.h as u32).step_by(self.size as usize) {
             for j in (0..self.w as u32).step_by(self.size as usize) {
                 let y: f32 = i as f32 - self.h / 2.0 + self.size / 2.0;
                 let x: f32 = j as f32 - self.w / 2.0 + self.size / 2.0;
 
                 let log_normal = LogNormal::new(2.0, 3.0).unwrap();
-                let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 2.0;
+                let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 100.0;
 
-                if fill > 1.0 {
+                if fill > 94.0 {
                     draw.rect()
                         .color(STEELBLUE)
+                        .w(self.size)
+                        .h(self.size)
+                        .x_y(x, y);
+                } else if fill > 74.0 {
+                    draw.rect()
+                        .color(DARKSLATEGRAY)
                         .w(self.size)
                         .h(self.size)
                         .x_y(x, y);
@@ -97,7 +105,7 @@ fn model(app: &App) -> Model {
     // 4K UHD texture
     let w: f32 = 3_840.0;
     let h: f32 = 2_160.0;
-    let size: f32 = 16.0;
+    let size: f32 = 2.0;
     let texture_size = [w as u32, h as u32];
 
     let w_id = app
@@ -163,14 +171,7 @@ fn model(app: &App) -> Model {
 
 fn update(app: &App, model: &mut Model, _update: Update) {
 //  model.ca.generate();
-
     let draw = &model.draw;
-    let elapsed_frames = app.main_window().elapsed_frames();
-
-    if elapsed_frames == 0 {
-        draw.background().color(WHITE);
-    }
-
     model.ca.display(&draw);
 
     let window = app.main_window();
@@ -181,7 +182,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let mut encoder = device.create_command_encoder(&ce_desc);
     model
         .renderer
-        .render_to_texture(device, &mut encoder, draw, &model.texture);
+        .render_to_texture(device, &mut encoder, &draw, &model.texture);
 
     window.swap_chain_queue().submit(&[encoder.finish()]);
 
@@ -195,27 +196,19 @@ fn view(_app: &App, model: &Model, frame: Frame) {
         .encode_render_pass(frame.texture_view(), &mut *encoder);
 }
 
-fn exit(app: &App, model: Model) {
+fn exit(app: &App, _model: Model) {
     println!("Waiting for PNG writing to complete...");
-    let window = app.main_window();
-    let device = window.swap_chain_device();
-    model
-        .texture_capturer
-        .await_active_snapshots(&device)
-        .unwrap();
+    maybe_mk_screenshot(&app);
     println!("Done!");
 }
 
 fn maybe_mk_screenshot(app: &App) {
     let window = app.main_window();
     let elapsed_frames = window.elapsed_frames();
-
-    if elapsed_frames % 1000 == 0 {
-        let path = capture_directory(app)
-            .join(elapsed_frames.to_string())
-            .with_extension("png");
-        window.capture_frame(path);
-    }
+    let path = capture_directory(app)
+        .join(elapsed_frames.to_string())
+        .with_extension("png");
+    window.capture_frame(path);
 }
 
 fn capture_directory(app: &App) -> std::path::PathBuf {
