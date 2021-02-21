@@ -1,6 +1,7 @@
 use nannou::prelude::*;
 use rand::distributions::{Distribution, Uniform};
 use rand_distr::{LogNormal};
+use nannou::noise::{NoiseFn, Perlin, Seedable};
 
 
 const RULE: i32 = 5;
@@ -55,8 +56,8 @@ impl Ca {
         self.cells = next_gen;
     }
 
-    fn display(&self, draw: &Draw) {
-        draw.background().color(BLACK);
+    fn display(&self, draw: &Draw, noise: Perlin) {
+        draw.background().color(DIMGRAY);
 
         for i in (0..self.h as u32).step_by(self.size as usize) {
             for j in (0..self.w as u32).step_by(self.size as usize) {
@@ -65,18 +66,24 @@ impl Ca {
 
                 let log_normal = LogNormal::new(2.0, 3.0).unwrap();
                 let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 100.0;
+                let n = noise.get([
+                    x as f64 / 100.0,
+                    y as f64 / 100.0,
+                    0.1,
+                ]) * 10.0;
+                let nabs = n.abs() as f32;
 
                 if fill > 94.0 {
                     draw.ellipse()
                         .color(STEELBLUE)
-                        .w(self.size)
-                        .h(self.size)
+                        .w(self.size * nabs)
+                        .h(self.size * nabs)
                         .x_y(x, y);
                 } else if fill > 74.0 {
                     draw.ellipse()
                         .color(DARKSLATEGRAY)
-                        .w(self.size)
-                        .h(self.size)
+                        .w(self.size * nabs)
+                        .h(self.size * nabs)
                         .x_y(x, y);
                 }
             }
@@ -97,6 +104,7 @@ struct Model {
     texture_capturer: wgpu::TextureCapturer,
     texture_reshaper: wgpu::TextureReshaper,
     ca: Ca,
+    noise_seed: u32,
 }
 
 fn model(app: &App) -> Model {
@@ -166,13 +174,15 @@ fn model(app: &App) -> Model {
         texture_capturer,
         texture_reshaper,
         ca: ca,
+        noise_seed: 12,
     }
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
 //  model.ca.generate();
+    let noise = Perlin::new().set_seed(model.noise_seed);
     let draw = &model.draw;
-    model.ca.display(&draw);
+    model.ca.display(&draw, noise);
 
     let window = app.main_window();
     let device = window.swap_chain_device();
@@ -215,5 +225,5 @@ fn capture_directory(app: &App) -> std::path::PathBuf {
     app.project_path()
         .expect("could not locate project_path")
         .join(app.exe_name().unwrap())
-        .join("twee")
+        .join("drie")
 }

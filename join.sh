@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# onvert -delay 4 -loop 0 $(ls -tr second/twee/*.png) animated.gif
 
 PNGS=($(ls -r second/twee/*.png))
 
