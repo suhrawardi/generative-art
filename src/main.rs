@@ -57,42 +57,36 @@ impl Ca {
         self.cells = next_gen;
     }
 
-    fn display(&self, draw: &Draw, noise: Perlin) {
-        draw.background().color(CADETBLUE);
+    fn display(&self, draw: &Draw, noises: Vec<Perlin>, k: f64) {
+        draw.background().color(LIGHTSLATEGRAY);
 
         for i in (0..self.h as u32).step_by(self.size as usize) {
             for j in (0..self.w as u32).step_by(self.size as usize) {
+
+                let log_normal = LogNormal::new(2.0, 3.0).unwrap();
+                let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 0.5;
+                let opa: f32 = log_normal.sample(&mut rand::thread_rng()) % 0.1;
+
                 let y: f32 = i as f32 - self.h / 2.0 + self.size / 2.0;
                 let x: f32 = j as f32 - self.w / 2.0 + self.size / 2.0;
 
-                let log_normal = LogNormal::new(2.0, 3.0).unwrap();
-                let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 100.0;
-                let opa: f32 = log_normal.sample(&mut rand::thread_rng()) % 600.0;
+                let n1 = noises[0].get([x as f64 / 100.0, y as f64 / 100.0, k as f64]);
+                let n2 = noises[1].get([x as f64 / 100.0, y as f64 / 100.0, k as f64]);
+                let n3 = noises[2].get([x as f64 / 100.0, y as f64 / 100.0, k as f64]);
+                let n4 = noises[3].get([(x / 300.0) as f64, (y / 300.0) as f64, k as f64]);
+                let nabs1 = 0.1 + n1.abs() as f32;
+                let nabs2 = 0.1 + n2 as f32;
+                let nabs3 = 0.1 + n3 as f32;
+                let nabs4 = n4.abs() as f32 % opa;
 
-                let n1 = noise.get([x as f64 / 100.0, y as f64 / 100.0, 0.9]);
-                let n2 = noise.get([x as f64 / 100.0, y as f64 / 200.0, 0.1]);
-                let n3 = noise.get([x as f64 / 200.0, y as f64 / 100.0, 0.9]);
-                let n4 = noise.get([(x / (opa + 600.0)) as f64, (y / (opa + 600.0)) as f64, 0.1]);
-                let nabs1 = n1.abs() as f32;
-                let nabs2 = n2.abs() as f32;
-                let nabs3 = n3.abs() as f32;
-                let nabs4 = n4.abs() as f32;
+                // let c = rgba(nabs1, nabs2, nabs3, nabs4);
+                let c = rgba(nabs1, nabs2, nabs3, nabs4 * 2.0);
 
-                let c = rgba(nabs1, nabs2, nabs3, nabs4);
-
-                if fill > 94.0 {
-                    draw.ellipse()
-                        .color(c)
-                        .w(self.size)
-                        .h(self.size)
-                        .x_y(x, y);
-                } else if fill > 24.0 {
-                    draw.ellipse()
-                        .color(c)
-                        .w(self.size)
-                        .h(self.size)
-                        .x_y(x, y);
-                }
+                draw.ellipse()
+                    .color(c)
+                    .w(self.size)
+                    .h(self.size)
+                    .x_y(x, y);
             }
         }
     }
@@ -111,7 +105,7 @@ struct Model {
     texture_capturer: wgpu::TextureCapturer,
     texture_reshaper: wgpu::TextureReshaper,
     ca: Ca,
-    noise_seed: u32,
+    noise_seeds: Vec<u32>,
 }
 
 fn model(app: &App) -> Model {
@@ -181,15 +175,21 @@ fn model(app: &App) -> Model {
         texture_capturer,
         texture_reshaper,
         ca: ca,
-        noise_seed: 12,
+        noise_seeds: vec![12, 17, 14, 100],
     }
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
 //  model.ca.generate();
-    let noise = Perlin::new().set_seed(model.noise_seed);
     let draw = &model.draw;
-    model.ca.display(&draw, noise);
+
+    let noise1 = Perlin::new().set_seed(model.noise_seeds[0]);
+    let noise2 = Perlin::new().set_seed(model.noise_seeds[1]);
+    let noise3 = Perlin::new().set_seed(model.noise_seeds[2]);
+    let noise4 = Perlin::new().set_seed(model.noise_seeds[3]);
+
+    let elapsed_frames = app.main_window().elapsed_frames() as f64 / 0.1;
+    model.ca.display(&draw, vec![noise1, noise2, noise3, noise4], elapsed_frames);
 
     let window = app.main_window();
     let device = window.swap_chain_device();
@@ -232,5 +232,5 @@ fn capture_directory(app: &App) -> std::path::PathBuf {
     app.project_path()
         .expect("could not locate project_path")
         .join(app.exe_name().unwrap())
-        .join("drie")
+        .join("vijf")
 }
