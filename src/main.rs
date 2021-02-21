@@ -67,13 +67,13 @@ impl Ca {
                 let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 100.0;
 
                 if fill > 94.0 {
-                    draw.rect()
+                    draw.ellipse()
                         .color(STEELBLUE)
                         .w(self.size)
                         .h(self.size)
                         .x_y(x, y);
                 } else if fill > 74.0 {
-                    draw.rect()
+                    draw.ellipse()
                         .color(DARKSLATEGRAY)
                         .w(self.size)
                         .h(self.size)
@@ -206,7 +206,7 @@ fn maybe_mk_screenshot(app: &App) {
     let window = app.main_window();
     let elapsed_frames = window.elapsed_frames();
     let path = capture_directory(app)
-        .join(elapsed_frames.to_string())
+        .join(format!("{:04}", elapsed_frames).to_string())
         .with_extension("png");
     window.capture_frame(path);
 }
