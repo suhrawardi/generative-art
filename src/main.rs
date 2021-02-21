@@ -2,6 +2,7 @@ use nannou::prelude::*;
 use rand::distributions::{Distribution, Uniform};
 use rand_distr::{LogNormal};
 use nannou::noise::{NoiseFn, Perlin, Seedable};
+// use palette::Rgba;
 
 
 const RULE: i32 = 5;
@@ -57,7 +58,7 @@ impl Ca {
     }
 
     fn display(&self, draw: &Draw, noise: Perlin) {
-        draw.background().color(DIMGRAY);
+        draw.background().color(CADETBLUE);
 
         for i in (0..self.h as u32).step_by(self.size as usize) {
             for j in (0..self.w as u32).step_by(self.size as usize) {
@@ -66,24 +67,30 @@ impl Ca {
 
                 let log_normal = LogNormal::new(2.0, 3.0).unwrap();
                 let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 100.0;
-                let n = noise.get([
-                    x as f64 / 100.0,
-                    y as f64 / 100.0,
-                    0.1,
-                ]) * 10.0;
-                let nabs = n.abs() as f32;
+                let opa: f32 = log_normal.sample(&mut rand::thread_rng()) % 600.0;
+
+                let n1 = noise.get([x as f64 / 100.0, y as f64 / 100.0, 0.9]);
+                let n2 = noise.get([x as f64 / 100.0, y as f64 / 200.0, 0.1]);
+                let n3 = noise.get([x as f64 / 200.0, y as f64 / 100.0, 0.9]);
+                let n4 = noise.get([(x / (opa + 600.0)) as f64, (y / (opa + 600.0)) as f64, 0.1]);
+                let nabs1 = n1.abs() as f32;
+                let nabs2 = n2.abs() as f32;
+                let nabs3 = n3.abs() as f32;
+                let nabs4 = n4.abs() as f32;
+
+                let c = rgba(nabs1, nabs2, nabs3, nabs4);
 
                 if fill > 94.0 {
                     draw.ellipse()
-                        .color(STEELBLUE)
-                        .w(self.size * nabs)
-                        .h(self.size * nabs)
+                        .color(c)
+                        .w(self.size)
+                        .h(self.size)
                         .x_y(x, y);
-                } else if fill > 74.0 {
+                } else if fill > 24.0 {
                     draw.ellipse()
-                        .color(DARKSLATEGRAY)
-                        .w(self.size * nabs)
-                        .h(self.size * nabs)
+                        .color(c)
+                        .w(self.size)
+                        .h(self.size)
                         .x_y(x, y);
                 }
             }
@@ -113,7 +120,7 @@ fn model(app: &App) -> Model {
     // 4K UHD texture
     let w: f32 = 3_840.0;
     let h: f32 = 2_160.0;
-    let size: f32 = 2.0;
+    let size: f32 = 6.0;
     let texture_size = [w as u32, h as u32];
 
     let w_id = app
