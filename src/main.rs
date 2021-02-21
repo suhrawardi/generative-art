@@ -58,29 +58,26 @@ impl Ca {
     }
 
     fn display(&self, draw: &Draw, noises: Vec<Perlin>, k: f64) {
-        draw.background().color(LIGHTSLATEGRAY);
-
         for i in (0..self.h as u32).step_by(self.size as usize) {
             for j in (0..self.w as u32).step_by(self.size as usize) {
 
                 let log_normal = LogNormal::new(2.0, 3.0).unwrap();
-                let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 0.5;
-                let opa: f32 = log_normal.sample(&mut rand::thread_rng()) % 0.1;
+                let fill: f32 = log_normal.sample(&mut rand::thread_rng()) % 300.0;
+                let opa: f32 = log_normal.sample(&mut rand::thread_rng()) % 1.0;
 
                 let y: f32 = i as f32 - self.h / 2.0 + self.size / 2.0;
                 let x: f32 = j as f32 - self.w / 2.0 + self.size / 2.0;
 
-                let n1 = noises[0].get([x as f64 / 100.0, y as f64 / 100.0, k as f64]);
-                let n2 = noises[1].get([x as f64 / 100.0, y as f64 / 100.0, k as f64]);
-                let n3 = noises[2].get([x as f64 / 100.0, y as f64 / 100.0, k as f64]);
-                let n4 = noises[3].get([(x / 300.0) as f64, (y / 300.0) as f64, k as f64]);
-                let nabs1 = 0.1 + n1.abs() as f32;
-                let nabs2 = 0.1 + n2 as f32;
-                let nabs3 = 0.1 + n3 as f32;
+                let n1 = noises[0].get([x as f64 / 300.0, y as f64 / 300.0, k as f64]);
+                let n2 = noises[1].get([x as f64 / 300.0, y as f64 / 300.0, k as f64]);
+                let n3 = noises[2].get([x as f64 / 300.0, y as f64 / 300.0, k as f64]);
+                let n4 = noises[3].get([(x / fill) as f64, (y / fill) as f64, k as f64]);
+                let nabs1 = n1.abs() as f32 % 1.0;
+                let nabs2 = n2.abs() as f32 % 1.0;
+                let nabs3 = n3.abs() as f32 % 1.0;
                 let nabs4 = n4.abs() as f32 % opa;
 
-                // let c = rgba(nabs1, nabs2, nabs3, nabs4);
-                let c = rgba(nabs1, nabs2, nabs3, nabs4 * 2.0);
+                let c = rgba(nabs1, nabs2, nabs3, nabs4);
 
                 draw.ellipse()
                     .color(c)
@@ -137,6 +134,7 @@ fn model(app: &App) -> Model {
         .build(device);
 
     let draw = nannou::Draw::new();
+    &draw.background().color(LIGHTSLATEGRAY);
     let descriptor = texture.descriptor();
     let renderer = nannou::draw::RendererBuilder::new()
         .build_from_texture_descriptor(device, descriptor);
@@ -188,7 +186,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let noise3 = Perlin::new().set_seed(model.noise_seeds[2]);
     let noise4 = Perlin::new().set_seed(model.noise_seeds[3]);
 
-    let elapsed_frames = app.main_window().elapsed_frames() as f64 / 0.1;
+    let elapsed_frames = app.main_window().elapsed_frames() as f64;
     model.ca.display(&draw, vec![noise1, noise2, noise3, noise4], elapsed_frames);
 
     let window = app.main_window();
